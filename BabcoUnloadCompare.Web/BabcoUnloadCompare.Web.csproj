@@ -1,0 +1,162 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="15.0" DefaultTargets="Build">
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.props" Condition="Exists('$(MSBuildToolsPath)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{BEE2F4A8-7C4A-4D41-BDB6-6F9FA8C1C128}</ProjectGuid>
+    <ProjectTypeGuids>{349C5851-65DF-11DA-9384-00065B846F21};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>BabcoUnloadCompare.Web</RootNamespace>
+    <AssemblyName>BabcoUnloadCompare.Web</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetFrameworkProfile />
+    <UseIISExpress>true</UseIISExpress>
+    <IISExpressSSLPort />
+    <Use64BitIISExpress>false</Use64BitIISExpress>
+    <RestoreProjectStyle>PackagesConfig</RestoreProjectStyle>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' Or '$(Configuration)|$(Platform)' == 'Debug|Any CPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <BaseOutputPath>bin\</BaseOutputPath>
+    <OutputPath>bin\</OutputPath>
+    <IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' Or '$(Configuration)|$(Platform)' == 'Release|Any CPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <BaseOutputPath>bin\</BaseOutputPath>
+    <OutputPath>bin\</OutputPath>
+    <IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Web.Services" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="ExcelDataReader">
+      <HintPath>..\packages\ExcelDataReader.3.7.0\lib\net462\ExcelDataReader.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="ExcelDataReader.DataSet">
+      <HintPath>..\packages\ExcelDataReader.DataSet.3.7.0\lib\net462\ExcelDataReader.DataSet.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Default.aspx" />
+    <Content Include="Site.Master" />
+    <Content Include="UnloadCompare.aspx" />
+    <Content Include="UnloadCompareHistory.aspx" />
+    <Content Include="UnloadCompareDetails.aspx" />
+    <Content Include="UnloadComparePrint.aspx" />
+    <Content Include="Content\site.css" />
+    <Content Include="Scripts\common.js" />
+    <Content Include="Scripts\unload-compare.js" />
+    <Content Include="Scripts\history.js" />
+    <Content Include="Scripts\details.js" />
+    <Content Include="Handlers\ExcelImport.ashx" />
+    <Content Include="Handlers\DocumentUpload.ashx" />
+    <Content Include="Handlers\DocumentDownload.ashx" />
+    <Content Include="Handlers\ExcelExport.ashx" />
+    <Content Include="Web.config" />
+    <Content Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Default.aspx.designer.cs">
+      <DependentUpon>Default.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Default.aspx.cs">
+      <DependentUpon>Default.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Site.Master.cs">
+      <DependentUpon>Site.Master</DependentUpon>
+    </Compile>
+    <Compile Include="Site.Master.designer.cs">
+      <DependentUpon>Site.Master</DependentUpon>
+    </Compile>
+    <Compile Include="UnloadCompare.aspx.cs">
+      <DependentUpon>UnloadCompare.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="UnloadCompare.aspx.designer.cs">
+      <DependentUpon>UnloadCompare.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="UnloadCompareHistory.aspx.cs">
+      <DependentUpon>UnloadCompareHistory.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="UnloadCompareHistory.aspx.designer.cs">
+      <DependentUpon>UnloadCompareHistory.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="UnloadCompareDetails.aspx.cs">
+      <DependentUpon>UnloadCompareDetails.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="UnloadCompareDetails.aspx.designer.cs">
+      <DependentUpon>UnloadCompareDetails.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="UnloadComparePrint.aspx.cs">
+      <DependentUpon>UnloadComparePrint.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="UnloadComparePrint.aspx.designer.cs">
+      <DependentUpon>UnloadComparePrint.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Models\UnloadCompareModels.cs" />
+    <Compile Include="Services\BabcoOrderSource.cs" />
+    <Compile Include="Services\DataAccess.cs" />
+    <Compile Include="Services\ExcelImportService.cs" />
+    <Compile Include="Services\SimpleXlsxWriter.cs" />
+    <Compile Include="Services\UploadSecurity.cs" />
+    <Compile Include="Handlers\ExcelImport.ashx.cs">
+      <DependentUpon>ExcelImport.ashx</DependentUpon>
+    </Compile>
+    <Compile Include="Handlers\DocumentUpload.ashx.cs">
+      <DependentUpon>DocumentUpload.ashx</DependentUpon>
+    </Compile>
+    <Compile Include="Handlers\DocumentDownload.ashx.cs">
+      <DependentUpon>DocumentDownload.ashx</DependentUpon>
+    </Compile>
+    <Compile Include="Handlers\ExcelExport.ashx.cs">
+      <DependentUpon>ExcelExport.ashx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">17.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+  </PropertyGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="Exists('$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets')" />
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{349C5851-65DF-11DA-9384-00065B846F21}">
+        <WebProjectProperties>
+          <UseIIS>True</UseIIS>
+          <AutoAssignPort>True</AutoAssignPort>
+          <DevelopmentServerPort>0</DevelopmentServerPort>
+          <DevelopmentServerVPath>/</DevelopmentServerVPath>
+          <IISUrl>http://localhost:50851/</IISUrl>
+          <StartAction>SpecificPage</StartAction>
+          <StartPageUrl>Default.aspx</StartPageUrl>
+          <NTLMAuthentication>False</NTLMAuthentication>
+          <UseCustomServer>False</UseCustomServer>
+          <CustomServerUrl />
+          <SaveServerSettingsInUserFile>False</SaveServerSettingsInUserFile>
+        </WebProjectProperties>
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>

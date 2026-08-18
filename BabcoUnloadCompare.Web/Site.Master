@@ -1,0 +1,40 @@
+<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Site.Master.cs" Inherits="BabcoUnloadCompare.Web.SiteMaster" %>
+<!DOCTYPE html>
+<html lang="en">
+<head runat="server">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><asp:ContentPlaceHolder ID="TitleContent" runat="server" /> - Babco Foods</title>
+    <link rel="stylesheet" href="<%= ResolveUrl("~/Content/site.css") %>" />
+    <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
+</head>
+<body>
+<form id="MainForm" runat="server">
+<div class="app-layout">
+  <aside id="appSidebar" class="sidebar" aria-label="Main navigation">
+    <div class="sidebar-brand">
+      <span class="brand-mark">B</span>
+      <div><strong>Babco Foods</strong><small>Warehouse Operations</small></div>
+      <button type="button" class="sidebar-close" aria-label="Close menu" onclick="App.closeSidebar()">×</button>
+    </div>
+    <nav class="side-nav">
+      <a class="side-nav-link" data-nav="UnloadCompare.aspx" href="<%= ResolveUrl("~/UnloadCompare.aspx") %>"><span class="nav-icon">UC</span><span><b>Unload Compare</b><small>PO receiving & count</small></span></a>
+      <a class="side-nav-link" data-nav="UnloadCompareHistory.aspx" href="<%= ResolveUrl("~/UnloadCompareHistory.aspx") %>"><span class="nav-icon">RH</span><span><b>Receiving History</b><small>Previous records</small></span></a>
+    </nav>
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-user"><span class="user-avatar">WU</span><div><strong>Warehouse User</strong><small>Receiving</small></div></div>
+  </aside>
+  <div id="sidebarOverlay" class="sidebar-overlay" onclick="App.closeSidebar()"></div>
+  <div class="app-main">
+    <header class="mobile-appbar">
+      <button type="button" class="menu-toggle" aria-label="Open menu" onclick="App.openSidebar()"><span></span><span></span><span></span></button>
+      <strong>Babco Foods</strong><span class="mobile-section">Receiving</span>
+    </header>
+    <main class="page-shell"><asp:ContentPlaceHolder ID="MainContent" runat="server" /></main>
+  </div>
+</div>
+</form>
+<script src="<%= ResolveUrl("~/Scripts/common.js") %>"></script>
+<asp:ContentPlaceHolder ID="ScriptContent" runat="server" />
+</body>
+</html>

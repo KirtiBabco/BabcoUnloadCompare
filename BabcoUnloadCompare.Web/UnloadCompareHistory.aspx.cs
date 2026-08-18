@@ -1,0 +1,2 @@
+using System; using System.Web.Services; using BabcoUnloadCompare.Web.Models; using BabcoUnloadCompare.Web.Services;
+namespace BabcoUnloadCompare.Web { public partial class UnloadCompareHistory:System.Web.UI.Page { protected void Page_Load(object s,EventArgs e){} [WebMethod] public static ApiResult<object> GetHistory(HistoryFilter filter){try{return new ApiResult<object>{IsSuccess=true,Data=new DataAccess().GetHistory(filter)};}catch(Exception ex){return new ApiResult<object>{IsSuccess=false,Message=ex.Message};}} } }
