@@ -1,0 +1,34 @@
+name: Validate Babco Unload Compare PR
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PROJECT_PATH: BabcoUnloadCompare.Web.csproj
+  SOLUTION_PATH: BabcoUnloadCompare.sln
+  PUBLISH_DIR: ${{ github.workspace }}\publish
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+      - name: Restore packages
+        run: nuget restore "${{ env.SOLUTION_PATH }}" -PackagesDirectory packages
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+      - name: Publish ASP.NET WebForms application
+        shell: pwsh
+        run: |
+          if (Test-Path "${{ env.PUBLISH_DIR }}") { Remove-Item "${{ env.PUBLISH_DIR }}" -Recurse -Force }
+          msbuild "${{ env.PROJECT_PATH }}" /m /p:Configuration=Release /p:DeployOnBuild=true /p:WebPublishMethod=FileSystem /p:DeleteExistingFiles=true /p:publishUrl="${{ env.PUBLISH_DIR }}"
+          if (-not (Test-Path "${{ env.PUBLISH_DIR }}\Web.config")) { throw "Publish output Web.config was not produced." }
