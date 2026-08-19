@@ -16,6 +16,28 @@ AUTH_APP_DISPLAY_NAME="BabcoUnloadCompare-Web-Auth"
 log() { printf '\n==> %s\n' "$*"; }
 require() { command -v "$1" >/dev/null 2>&1 || { echo "Missing required command: $1" >&2; exit 1; }; }
 
+read_sql_password_twice() {
+  while true; do
+    IFS= read -r -s -p "SQL admin password: " SQL_ADMIN_PASSWORD </dev/tty
+    printf '\n' >/dev/tty
+    IFS= read -r -s -p "Confirm SQL admin password: " SQL_ADMIN_PASSWORD_2 </dev/tty
+    printf '\n' >/dev/tty
+    if [ -n "$SQL_ADMIN_PASSWORD" ] && [ "$SQL_ADMIN_PASSWORD" = "$SQL_ADMIN_PASSWORD_2" ]; then
+      return 0
+    fi
+    echo "Passwords do not match or are empty. Please try again." >/dev/tty
+  done
+}
+
+read_sql_password_once() {
+  while true; do
+    IFS= read -r -s -p "SQL admin password: " SQL_ADMIN_PASSWORD </dev/tty
+    printf '\n' >/dev/tty
+    [ -n "$SQL_ADMIN_PASSWORD" ] && return 0
+    echo "Password cannot be empty. Please try again." >/dev/tty
+  done
+}
+
 require az
 
 log "Using Azure subscription"
@@ -52,17 +74,12 @@ az webapp update -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" --https-only true >/dev/
 log "Creating or reusing Azure SQL logical server"
 if ! az sql server show -g "$RESOURCE_GROUP" -n "$SQL_SERVER_NAME" >/dev/null 2>&1; then
   echo "Azure SQL server does not exist yet. Enter a NEW strong SQL admin password. It will not be printed."
-  read -r -s -p "SQL admin password: " SQL_ADMIN_PASSWORD
-  echo
-  read -r -s -p "Confirm SQL admin password: " SQL_ADMIN_PASSWORD_2
-  echo
-  [ "$SQL_ADMIN_PASSWORD" = "$SQL_ADMIN_PASSWORD_2" ] || { echo "Passwords do not match" >&2; exit 3; }
+  read_sql_password_twice
   az sql server create -g "$RESOURCE_GROUP" -n "$SQL_SERVER_NAME" -l "$LOCATION" \
     -u "$SQL_ADMIN_USER" -p "$SQL_ADMIN_PASSWORD" --minimal-tls-version 1.2 --enable-public-network true >/dev/null
 else
   echo "Azure SQL server already exists. Enter its SQL admin password only to configure the app connection string."
-  read -r -s -p "SQL admin password: " SQL_ADMIN_PASSWORD
-  echo
+  read_sql_password_once
 fi
 
 log "Creating or reusing Azure SQL database"
