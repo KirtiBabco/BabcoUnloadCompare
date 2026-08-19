@@ -91,14 +91,18 @@ done
 
 DB_CS="Server=tcp:${SQL_SERVER_NAME}.database.windows.net,1433;Initial Catalog=${SQL_DATABASE_NAME};Persist Security Info=False;User ID=${SQL_ADMIN_USER};Password=${SQL_ADMIN_PASSWORD};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 
-log "Configuring App Service database and remote build settings"
+log "Configuring App Service application database and remote build settings"
 az webapp config appsettings set -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" --settings \
   UnloadCompareConnectionString="$DB_CS" \
-  BabcoSupportConnectionString="$DB_CS" \
   UnloadCompare.UploadRoot="~/App_Data/Uploads/UnloadCompare" \
   UnloadCompare.MaxUploadMB="15" \
   SCM_DO_BUILD_DURING_DEPLOYMENT="true" \
   PROJECT="BabcoUnloadCompare.Web.csproj" >/dev/null
+
+# Never set/overwrite BabcoSupportConnectionString here. It is intentionally
+# managed separately under App Service > Environment variables > Connection strings
+# (or by Azure/configure-babco-hybrid.sh) so production credentials can be rotated
+# without redeploying this application.
 unset DB_CS SQL_ADMIN_PASSWORD
 
 log "Downloading current GitHub main source"
@@ -190,4 +194,4 @@ printf 'SQL_SERVER=%s.database.windows.net\n' "$SQL_SERVER_NAME"
 printf 'SQL_DATABASE=%s\n' "$SQL_DATABASE_NAME"
 printf 'AUTH_STATUS=%s\n' "$AUTH_STATUS"
 printf 'SOURCE=%s/%s (%s)\n' "$REPO_OWNER" "$REPO_NAME" "$REPO_BRANCH"
-printf '\nApplication DB is live. BabcoSupportConnectionString is temporarily pointed to the same Azure SQL DB so the application can boot. The next infrastructure task is the private/on-prem Babco support database Hybrid Connection.\n'
+printf '\nApplication DB is live. BabcoSupportConnectionString is managed separately as an Azure App Service connection-string secret. Configure it in Environment variables > Connection strings or run Azure/configure-babco-hybrid.sh.\n'
