@@ -9,7 +9,8 @@ WEBAPP_NAME="app-babco-unloadcompare-0e27b0b7-260818"
 SQL_SERVER_NAME="sql-babco-unloadcompare-0e27b0b7-260818"
 SQL_DATABASE_NAME="BabcoUnloadCompareDb"
 SQL_ADMIN_USER="babcoUnloadAdmin"
-REPO_URL="https://github.com/KirtiBabco/BabcoUnloadCompare"
+REPO_OWNER="KirtiBabco"
+REPO_NAME="BabcoUnloadCompare"
 REPO_BRANCH="main"
 AUTH_APP_DISPLAY_NAME="BabcoUnloadCompare-Web-Auth"
 
@@ -19,6 +20,8 @@ require() { command -v "$1" >/dev/null 2>&1 || { echo "Missing required command:
 require az
 require curl
 require openssl
+require unzip
+require zip
 
 log "Using Azure subscription"
 az account set --subscription "$SUBSCRIPTION_ID"
@@ -88,7 +91,7 @@ done
 
 DB_CS="Server=tcp:${SQL_SERVER_NAME}.database.windows.net,1433;Initial Catalog=${SQL_DATABASE_NAME};Persist Security Info=False;User ID=${SQL_ADMIN_USER};Password=${SQL_ADMIN_PASSWORD};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 
-log "Configuring App Service database and build settings"
+log "Configuring App Service database and remote build settings"
 az webapp config appsettings set -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" --settings \
   UnloadCompareConnectionString="$DB_CS" \
   BabcoSupportConnectionString="$DB_CS" \
@@ -98,34 +101,49 @@ az webapp config appsettings set -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" --settin
   PROJECT="BabcoUnloadCompare.Web.csproj" >/dev/null
 unset DB_CS SQL_ADMIN_PASSWORD
 
-log "Connecting the public GitHub repository to Azure App Service Build Service"
-az webapp deployment source delete -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" >/dev/null 2>&1 || true
-az webapp deployment source config -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" \
-  --repo-url "$REPO_URL" \
-  --branch "$REPO_BRANCH" \
-  --repository-type externalgit \
-  --manual-integration >/dev/null
+log "Downloading current GitHub main source"
+WORK_DIR="$(mktemp -d)"
+trap 'rm -rf "$WORK_DIR"' EXIT
+SOURCE_ARCHIVE="$WORK_DIR/source.zip"
+DEPLOY_ZIP="$WORK_DIR/deploy.zip"
+curl -fL --retry 3 --retry-delay 2 \
+  "https://github.com/${REPO_OWNER}/${REPO_NAME}/archive/refs/heads/${REPO_BRANCH}.zip" \
+  -o "$SOURCE_ARCHIVE"
+unzip -q "$SOURCE_ARCHIVE" -d "$WORK_DIR"
+SOURCE_DIR="$(find "$WORK_DIR" -mindepth 1 -maxdepth 1 -type d -name "${REPO_NAME}-*" | head -n 1)"
+[ -n "$SOURCE_DIR" ] && [ -f "$SOURCE_DIR/BabcoUnloadCompare.Web.csproj" ] || { echo "GitHub source archive did not contain the expected project." >&2; exit 3; }
 
-log "Synchronizing GitHub source and building ASP.NET WebForms in Kudu"
-az webapp deployment source sync -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME"
-az webapp restart -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" >/dev/null
+log "Creating App Service ZIP package without the GitHub wrapper directory"
+(
+  cd "$SOURCE_DIR"
+  zip -qr "$DEPLOY_ZIP" . \
+    -x ".git/*" ".github/*" "Azure/*" "*.user" ".vs/*" "bin/*" "obj/*" "packages/*"
+)
+
+log "Deploying source ZIP to Azure App Service with Kudu remote build"
+az webapp deploy -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" \
+  --src-path "$DEPLOY_ZIP" \
+  --type zip \
+  --clean true \
+  --restart true \
+  --timeout 900000
 
 LIVE_URL="https://${WEBAPP_NAME}.azurewebsites.net/"
 log "Waiting for the website to start"
 HTTP_CODE="000"
-for attempt in $(seq 1 30); do
-  HTTP_CODE="$(curl -k -L -sS -o /tmp/babco-unloadcompare-health.html -w '%{http_code}' --max-time 20 "$LIVE_URL" || true)"
+for attempt in $(seq 1 36); do
+  HTTP_CODE="$(curl -k -sS -o /tmp/babco-unloadcompare-health.html -w '%{http_code}' --max-time 20 "$LIVE_URL" || true)"
   if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
     break
   fi
-  echo "Attempt ${attempt}/30: HTTP ${HTTP_CODE}; waiting 10 seconds..."
+  echo "Attempt ${attempt}/36: HTTP ${HTTP_CODE}; waiting 10 seconds..."
   sleep 10
 done
 
 if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ]; then
   echo "Website deployment finished but health check returned HTTP ${HTTP_CODE}." >&2
   echo "Recent deployment information:" >&2
-  az webapp log deployment show -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" 2>/dev/null | tail -80 || true
+  az webapp log deployment show -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" 2>/dev/null | tail -120 || true
   exit 4
 fi
 
@@ -171,5 +189,5 @@ printf 'LIVE_URL=%s\n' "$LIVE_URL"
 printf 'SQL_SERVER=%s.database.windows.net\n' "$SQL_SERVER_NAME"
 printf 'SQL_DATABASE=%s\n' "$SQL_DATABASE_NAME"
 printf 'AUTH_STATUS=%s\n' "$AUTH_STATUS"
-printf 'SOURCE=%s (%s)\n' "$REPO_URL" "$REPO_BRANCH"
+printf 'SOURCE=%s/%s (%s)\n' "$REPO_OWNER" "$REPO_NAME" "$REPO_BRANCH"
 printf '\nApplication DB is live. BabcoSupportConnectionString is temporarily pointed to the same Azure SQL DB so the application can boot. The next infrastructure task is the private/on-prem Babco support database Hybrid Connection.\n'
