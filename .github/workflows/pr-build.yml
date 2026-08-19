@@ -26,9 +26,13 @@ jobs:
         run: nuget restore "${{ env.SOLUTION_PATH }}" -PackagesDirectory packages
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
-      - name: Publish ASP.NET WebForms application
+      - name: Build and stage ASP.NET WebForms application
         shell: pwsh
         run: |
           if (Test-Path "${{ env.PUBLISH_DIR }}") { Remove-Item "${{ env.PUBLISH_DIR }}" -Recurse -Force }
-          msbuild "${{ env.PROJECT_PATH }}" /m /p:Configuration=Release /p:DeployOnBuild=true /p:WebPublishMethod=FileSystem /p:DeleteExistingFiles=true /p:publishUrl="${{ env.PUBLISH_DIR }}"
-          if (-not (Test-Path "${{ env.PUBLISH_DIR }}\Web.config")) { throw "Publish output Web.config was not produced." }
+          msbuild "${{ env.PROJECT_PATH }}" /m /p:Configuration=Release /p:DeployOnBuild=true
+          $packageTmp = Join-Path "${{ github.workspace }}" "obj\Release\Package\PackageTmp"
+          if (-not (Test-Path "$packageTmp\Web.config")) { throw "MSBuild PackageTmp Web.config was not produced." }
+          New-Item -ItemType Directory -Path "${{ env.PUBLISH_DIR }}" -Force | Out-Null
+          Copy-Item "$packageTmp\*" "${{ env.PUBLISH_DIR }}" -Recurse -Force
+          if (-not (Test-Path "${{ env.PUBLISH_DIR }}\Web.config")) { throw "Staged publish Web.config was not produced." }
