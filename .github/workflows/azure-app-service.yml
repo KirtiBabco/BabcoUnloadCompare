@@ -12,7 +12,7 @@ on:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 env:
   PROJECT_PATH: BabcoUnloadCompare.Web.csproj
@@ -25,12 +25,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v2
+
       - name: Restore packages
         run: nuget restore "${{ env.SOLUTION_PATH }}" -PackagesDirectory packages
+
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
+
       - name: Build and stage ASP.NET WebForms application
         shell: pwsh
         run: |
@@ -41,11 +45,51 @@ jobs:
           New-Item -ItemType Directory -Path "${{ env.PUBLISH_DIR }}" -Force | Out-Null
           Copy-Item "$packageTmp\*" "${{ env.PUBLISH_DIR }}" -Recurse -Force
           if (-not (Test-Path "${{ env.PUBLISH_DIR }}\Web.config")) { throw "Staged publish Web.config was not produced." }
+
       - name: Upload publish artifact
         uses: actions/upload-artifact@v4
         with:
           name: webapp-publish
           path: ${{ env.PUBLISH_DIR }}
+
+  publish-deployment-package:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download compiled website
+        uses: actions/download-artifact@v4
+        with:
+          name: webapp-publish
+          path: publish
+
+      - name: Create deploy ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd publish
+          zip -qr ../webapp-publish.zip .
+          cd ..
+          test -s webapp-publish.zip
+
+      - name: Publish deploy ZIP to deployment-artifacts branch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir deploy-branch
+          mv webapp-publish.zip deploy-branch/webapp-publish.zip
+          printf 'Source commit: %s\nBuilt: %s\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > deploy-branch/build.txt
+          cd deploy-branch
+          git init
+          git checkout -b deployment-artifacts
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add webapp-publish.zip build.txt
+          git commit -m "Publish compiled WebForms deployment package"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin deployment-artifacts
 
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.AZURE_DEPLOY_ENABLED == 'true'
@@ -58,12 +102,14 @@ jobs:
         with:
           name: webapp-publish
           path: ${{ env.PUBLISH_DIR }}
+
       - name: Azure login with OIDC
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v3
         with:
