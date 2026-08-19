@@ -1,0 +1,82 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.2.2.0",
+  "parameters": {
+    "location": { "type": "string", "defaultValue": "centralindia" },
+    "webAppName": { "type": "string" },
+    "existingAppServicePlanId": { "type": "string" },
+    "sqlServerName": { "type": "string" },
+    "sqlDatabaseName": { "type": "string", "defaultValue": "BabcoUnloadCompareDb" },
+    "sqlAdminLogin": { "type": "string", "defaultValue": "babcoUnloadAdmin" },
+    "sqlAdminPassword": { "type": "secureString" }
+  },
+  "variables": {
+    "dbConnectionString": "[format('Server=tcp:{0}.database.windows.net,1433;Initial Catalog={1};Persist Security Info=False;User ID={2};Password={3};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;', parameters('sqlServerName'), parameters('sqlDatabaseName'), parameters('sqlAdminLogin'), parameters('sqlAdminPassword'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2023-08-01-preview",
+      "name": "[parameters('sqlServerName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "administratorLogin": "[parameters('sqlAdminLogin')]",
+        "administratorLoginPassword": "[parameters('sqlAdminPassword')]",
+        "minimalTlsVersion": "1.2",
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers/firewallRules",
+      "apiVersion": "2023-08-01-preview",
+      "name": "[format('{0}/AllowAzureServices', parameters('sqlServerName'))]",
+      "dependsOn": ["[resourceId('Microsoft.Sql/servers', parameters('sqlServerName'))]"],
+      "properties": { "startIpAddress": "0.0.0.0", "endIpAddress": "0.0.0.0" }
+    },
+    {
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2023-08-01-preview",
+      "name": "[format('{0}/{1}', parameters('sqlServerName'), parameters('sqlDatabaseName'))]",
+      "location": "[parameters('location')]",
+      "dependsOn": ["[resourceId('Microsoft.Sql/servers', parameters('sqlServerName'))]"],
+      "sku": { "name": "GP_S_Gen5_1", "tier": "GeneralPurpose", "family": "Gen5", "capacity": 1 },
+      "properties": { "maxSizeBytes": 34359738368, "collation": "SQL_Latin1_General_CP1_CI_AS", "zoneRedundant": false, "autoPauseDelay": 60, "minCapacity": 0.5 }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2024-11-01",
+      "name": "[parameters('webAppName')]",
+      "location": "[parameters('location')]",
+      "kind": "app",
+      "dependsOn": ["[resourceId('Microsoft.Sql/servers/databases', parameters('sqlServerName'), parameters('sqlDatabaseName'))]"],
+      "properties": {
+        "serverFarmId": "[parameters('existingAppServicePlanId')]",
+        "httpsOnly": true,
+        "publicNetworkAccess": "Enabled",
+        "siteConfig": {
+          "netFrameworkVersion": "v4.0",
+          "managedPipelineMode": "Integrated",
+          "use32BitWorkerProcess": false,
+          "alwaysOn": true,
+          "http20Enabled": true,
+          "minTlsVersion": "1.2",
+          "scmMinTlsVersion": "1.2",
+          "ftpsState": "Disabled",
+          "defaultDocuments": ["Default.aspx", "UnloadCompare.aspx"],
+          "appSettings": [
+            { "name": "UnloadCompareConnectionString", "value": "[variables('dbConnectionString')]" },
+            { "name": "BabcoSupportConnectionString", "value": "[variables('dbConnectionString')]" },
+            { "name": "SCM_DO_BUILD_DURING_DEPLOYMENT", "value": "false" },
+            { "name": "PROJECT", "value": "BabcoUnloadCompare.Web.csproj" }
+          ]
+        }
+      },
+      "tags": { "application": "BabcoUnloadCompare", "version": "1.2.2" }
+    }
+  ],
+  "outputs": {
+    "liveUrl": { "type": "string", "value": "[format('https://{0}.azurewebsites.net/', parameters('webAppName'))]" },
+    "sqlServerFqdn": { "type": "string", "value": "[format('{0}.database.windows.net', parameters('sqlServerName'))]" },
+    "sqlDatabaseName": { "type": "string", "value": "[parameters('sqlDatabaseName')]" }
+  }
+}
