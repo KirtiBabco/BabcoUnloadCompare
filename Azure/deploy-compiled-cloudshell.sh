@@ -35,7 +35,7 @@ az webapp config access-restriction set -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" \
 az webapp auth update -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" --enabled false >/dev/null 2>&1 || true
 
 echo "==> Repairing IIS default document and root virtual application"
-az rest --method patch --uri "$CFG_URI" --body '{"properties":{"managedPipelineMode":"Integrated","netFrameworkVersion":"v4.0","defaultDocuments":["Default.aspx","UnloadCompare.aspx","default.aspx","Default.htm","Default.html","index.html","hostingstart.html"],"virtualApplications":[{"virtualPath":"/","physicalPath":"site\\wwwroot","preloadEnabled":true}]}}' >/dev/null
+az rest --method patch --uri "$CFG_URI" --body '{"properties":{"managedPipelineMode":"Integrated","netFrameworkVersion":"v4.0","defaultDocuments":["Default.aspx","UnloadCompare.aspx","Default.htm","Default.html","index.html","hostingstart.html"],"virtualApplications":[{"virtualPath":"/","physicalPath":"site\\wwwroot","preloadEnabled":true}]}}' >/dev/null
 
 echo "==> Getting Microsoft Entra token for Kudu"
 TOKEN="$(az account get-access-token --query accessToken -o tsv)"
