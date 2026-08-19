@@ -9,17 +9,14 @@ namespace BabcoUnloadCompare.Web.Services
 {
     public class DataAccess
     {
-        private readonly string _appCs = GetConnectionString("UnloadCompareConnectionString", "ConnectionString");
-        private readonly string _supportCs = GetConnectionString("BabcoSupportConnectionString", "ConnectionString");
-        private static string GetConnectionString(string preferred, string fallback)
+        private readonly string _appCs = GetRequiredConnectionString("UnloadCompareConnectionString");
+        private readonly string _supportCs = GetRequiredConnectionString("BabcoSupportConnectionString");
+
+        private static string GetRequiredConnectionString(string name)
         {
-            var p = ConfigurationManager.ConnectionStrings[preferred];
-            if (p != null && !string.IsNullOrWhiteSpace(p.ConnectionString)) return p.ConnectionString;
-            var f = ConfigurationManager.ConnectionStrings[fallback];
-            if (f == null || string.IsNullOrWhiteSpace(f.ConnectionString)) throw new ConfigurationErrorsException("Missing connection string: " + preferred);
-            return f.ConnectionString;
+            return ConnectionStringResolver.GetRequired(name);
         }
-        private static string CurrentUser { get { return (System.Web.HttpContext.Current?.Session?["UserName"] as string) ?? (System.Web.HttpContext.Current?.User?.Identity?.Name) ?? "Warehouse User"; } }
+        private static string CurrentUser { get { return AuthContext.CurrentUser; } }
         private SqlConnection Open() { var cn = new SqlConnection(_appCs); cn.Open(); return cn; }
         private static void Add(SqlCommand cmd, string name, object value) { cmd.Parameters.AddWithValue(name, value ?? DBNull.Value); }
 
@@ -77,7 +74,6 @@ VALUES(@PONumber,@SKU,@ItemName,@ExpectedQty,@UOM,@ExpectedPallets);", cn, tx))
 
         public int EnsureDraft(string po)
         {
-            // Refresh live UOS order data before creating/reopening a receiving draft.
             var live = LoadPO(po);
             if (live == null) throw new InvalidOperationException("PO does not exist in UOS_Order.");
             using (var cn = Open()) using (var cmd = new SqlCommand("usp_UC_EnsureDraft", cn)) { cmd.CommandType = CommandType.StoredProcedure; Add(cmd, "@PONumber", po); Add(cmd, "@UserName", CurrentUser); return Convert.ToInt32(cmd.ExecuteScalar()); }

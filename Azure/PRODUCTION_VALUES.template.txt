@@ -1,0 +1,23 @@
+DO NOT PUT PASSWORDS IN THIS FILE OR COMMIT THEM.
+
+Azure subscription ID:
+Azure tenant ID:
+Resource group:
+Region: centralindia
+Existing App Service plan:
+Azure Web App name:
+Azure SQL server name:
+Azure SQL database name: BabcoUnloadCompareDb
+
+GitHub repository: KirtiBabco/BabcoUnloadCompare
+GitHub branch: main
+
+External Babco SQL hostname:
+External Babco SQL fixed TCP port:
+External Babco database: Babco
+Hybrid Connection name:
+Hybrid Connection status: Not configured
+
+Microsoft Entra App Registration name: Babco Unload Compare
+Microsoft Entra client ID:
+Authentication: Single tenant / Require authentication
