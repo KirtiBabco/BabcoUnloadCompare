@@ -4,7 +4,7 @@ set -euo pipefail
 SUBSCRIPTION_ID="0e27b0b7-22b9-4e96-8faa-897ca9f09e9c"
 RESOURCE_GROUP="rg-babco-rnd-sandbox"
 WEBAPP_NAME="app-babco-unloadcompare-0e27b0b7-260818"
-EXPECTED_SOURCE="3eb360df036edcd12a0b11a24ec38346d545db26"
+OLD_SOURCE="31d82dea3a52cd92d86306c9181a7d5788357c0d"
 BUILD_INFO_URL="https://raw.githubusercontent.com/KirtiBabco/BabcoUnloadCompare/deployment-artifacts/build.txt"
 ZIP_URL="https://raw.githubusercontent.com/KirtiBabco/BabcoUnloadCompare/deployment-artifacts/webapp-publish.zip"
 ZIP_PATH="/tmp/babco-unloadcompare-webapp.zip"
@@ -13,19 +13,19 @@ LIVE_URL="https://${WEBAPP_NAME}.azurewebsites.net"
 
 az account set --subscription "$SUBSCRIPTION_ID"
 
-echo "==> Waiting for GitHub Actions to publish the fail-safe startup build"
+echo "==> Waiting for GitHub Actions to publish a post-fix compiled build"
 BUILD_SOURCE=""
 for attempt in $(seq 1 45); do
   BUILD_SOURCE="$(curl -fsSL "${BUILD_INFO_URL}?t=${attempt}" 2>/dev/null | sed -n 's/^Source commit: //p' | tr -d '\r' || true)"
-  if [ "$BUILD_SOURCE" = "$EXPECTED_SOURCE" ]; then
+  if [ -n "$BUILD_SOURCE" ] && [ "$BUILD_SOURCE" != "$OLD_SOURCE" ]; then
     echo "Compiled package ready: $BUILD_SOURCE"
     break
   fi
   echo "Build not ready yet (${attempt}/45). Current artifact: ${BUILD_SOURCE:-unknown}"
   sleep 8
 done
-if [ "$BUILD_SOURCE" != "$EXPECTED_SOURCE" ]; then
-  echo "GitHub Actions package for $EXPECTED_SOURCE is not ready yet. Re-run this script in a minute." >&2
+if [ -z "$BUILD_SOURCE" ] || [ "$BUILD_SOURCE" = "$OLD_SOURCE" ]; then
+  echo "GitHub Actions post-fix package is not ready yet. Re-run this script in a minute." >&2
   exit 11
 fi
 
@@ -73,8 +73,8 @@ echo "==> Getting Microsoft Entra token for Kudu"
 TOKEN="$(az account get-access-token --query accessToken -o tsv)"
 [ -n "$TOKEN" ] || { echo "Unable to obtain Azure access token." >&2; exit 2; }
 
-echo "==> Downloading compiled GitHub Actions package"
-curl -fL --retry 3 --retry-delay 2 "${ZIP_URL}?source=${EXPECTED_SOURCE}" -o "$ZIP_PATH"
+echo "==> Downloading compiled GitHub Actions package from $BUILD_SOURCE"
+curl -fL --retry 3 --retry-delay 2 "${ZIP_URL}?source=${BUILD_SOURCE}" -o "$ZIP_PATH"
 
 echo "==> Expanding ZIP directly into Kudu site/wwwroot"
 ZIP_BODY="/tmp/babco-kudu-zip-response.txt"
