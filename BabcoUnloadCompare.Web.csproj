@@ -51,11 +51,11 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="ExcelDataReader">
-      <HintPath>..\packages\ExcelDataReader.3.7.0\lib\net462\ExcelDataReader.dll</HintPath>
+      <HintPath>packages\ExcelDataReader.3.7.0\lib\net462\ExcelDataReader.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="ExcelDataReader.DataSet">
-      <HintPath>..\packages\ExcelDataReader.DataSet.3.7.0\lib\net462\ExcelDataReader.DataSet.dll</HintPath>
+      <HintPath>packages\ExcelDataReader.DataSet.3.7.0\lib\net462\ExcelDataReader.DataSet.dll</HintPath>
       <Private>True</Private>
     </Reference>
   </ItemGroup>
@@ -76,6 +76,7 @@
     <Content Include="Handlers\DocumentDownload.ashx" />
     <Content Include="Handlers\ExcelExport.ashx" />
     <Content Include="Web.config" />
+    <Content Include="Web.Release.config" />
     <Content Include="Global.asax" />
     <Content Include="App_Data\Database\00_AzureSupportPlaceholder.sql" />
     <Content Include="App_Data\Database\01_Schema.sql" />
@@ -99,6 +100,8 @@
     <Compile Include="Global.asax.cs"><DependentUpon>Global.asax</DependentUpon></Compile>
     <Compile Include="Models\UnloadCompareModels.cs" />
     <Compile Include="Services\DatabaseBootstrapper.cs" />
+    <Compile Include="Services\ConnectionStringResolver.cs" />
+    <Compile Include="Services\AuthContext.cs" />
     <Compile Include="Services\BabcoOrderSource.cs" />
     <Compile Include="Services\DataAccess.cs" />
     <Compile Include="Services\ExcelImportService.cs" />
