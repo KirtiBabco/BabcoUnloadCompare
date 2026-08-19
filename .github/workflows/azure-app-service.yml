@@ -5,6 +5,9 @@ on:
     branches:
       - main
       - agent/azure-appservice-go-live
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -41,7 +44,7 @@ jobs:
           path: ${{ env.PUBLISH_DIR }}
 
   deploy:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: build
     runs-on: windows-latest
     environment: production
