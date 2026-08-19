@@ -54,7 +54,7 @@ if ! az webapp hybrid-connection list -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" \
     --namespace "$RELAY_NAMESPACE" --hybrid-connection "$HYBRID_CONNECTION_NAME" >/dev/null
 fi
 
-log "Configuring BabcoSupportConnectionString"
+log "Configuring secret BabcoSupportConnectionString"
 read -r -p "Babco SQL login (use a least-privilege read-only account): " SQL_USER
 read -r -s -p "Babco SQL password: " SQL_PASSWORD
 echo
@@ -73,19 +73,30 @@ else
 fi
 
 SUPPORT_CS="Server=${HOST},${PORT};Initial Catalog=${DATABASE_NAME};User ID=${SQL_USER};Password=${SQL_PASSWORD};${TLS_PART}Connect Timeout=30;"
-az webapp config appsettings set -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" --settings \
-  BabcoSupportConnectionString="$SUPPORT_CS" >/dev/null
+
+# Remove the old ordinary App Setting if it exists. App Service Connection Strings
+# are stored separately and exposed to the app as SQLCONNSTR_BabcoSupportConnectionString.
+az webapp config appsettings delete -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" \
+  --setting-names BabcoSupportConnectionString >/dev/null 2>&1 || true
+
+az webapp config connection-string set -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" \
+  --connection-string-type SQLServer \
+  --settings BabcoSupportConnectionString="$SUPPORT_CS" >/dev/null
+
 unset SQL_PASSWORD SUPPORT_CS
-az webapp restart -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME"
+az webapp restart -g "$RESOURCE_GROUP" -n "$WEBAPP_NAME" >/dev/null
 
 printf '\n============================================================\n'
-printf 'AZURE HYBRID CONNECTION CONFIGURED\n'
+printf 'AZURE HYBRID CONNECTION + SECRET CONFIGURED\n'
 printf '============================================================\n'
 printf 'Web App: %s\n' "$WEBAPP_NAME"
+printf 'Connection setting: BabcoSupportConnectionString (SQLServer)\n'
+printf 'Azure environment variable: SQLCONNSTR_BabcoSupportConnectionString\n'
 printf 'Relay Namespace: %s\n' "$RELAY_NAMESPACE"
 printf 'Hybrid Connection: %s\n' "$HYBRID_CONNECTION_NAME"
 printf 'Endpoint: %s:%s\n' "$HOST" "$PORT"
 printf '\nIMPORTANT LOCAL-SERVER STEP:\n'
-printf 'Install the current Microsoft Hybrid Connection Manager on a Windows/Linux machine that can resolve and reach %s:%s.\n' "$HOST" "$PORT"
-printf 'In HCM, sign in to Azure, select subscription %s, and add hybrid connection %s.\n' "$SUBSCRIPTION_ID" "$HYBRID_CONNECTION_NAME"
-printf 'The App Service Hybrid Connection status must become Connected before live Babco PO reads can work.\n'
+printf 'Install Microsoft Hybrid Connection Manager on a machine that can resolve and reach %s:%s.\n' "$HOST" "$PORT"
+printf 'In HCM, sign in to Azure and add hybrid connection %s.\n' "$HYBRID_CONNECTION_NAME"
+printf 'App Service Hybrid Connection status must become Connected before live Babco PO reads can work.\n'
+printf '\nYou can later change the DB credential in Azure Portal > App Service > Settings > Environment variables > Connection strings > BabcoSupportConnectionString.\n'
