@@ -48,7 +48,7 @@ jobs:
           path: ${{ env.PUBLISH_DIR }}
 
   deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.AZURE_DEPLOY_ENABLED == 'true'
     needs: build
     runs-on: windows-latest
     environment: production
