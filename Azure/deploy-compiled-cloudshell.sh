@@ -41,8 +41,15 @@ fi
 echo "Kudu publish accepted with HTTP ${HTTP_STATUS}."
 rm -f "$ZIP_PATH"
 
-# The publish API can finish asynchronously. Restart and health-check until the app responds.
-az webapp restart --resource-group "$RESOURCE_GROUP" --name "$WEBAPP_NAME" >/dev/null
+echo "==> Starting App Service"
+az webapp start --resource-group "$RESOURCE_GROUP" --name "$WEBAPP_NAME" >/dev/null
+STATE="$(az webapp show --resource-group "$RESOURCE_GROUP" --name "$WEBAPP_NAME" --query state -o tsv)"
+echo "App Service state: $STATE"
+
+if [ "$STATE" != "Running" ]; then
+  echo "App Service did not enter Running state. Check billing/subscription/quota status in Azure." >&2
+  exit 5
+fi
 
 echo "==> Waiting for application response"
 HTTP_CODE="000"
@@ -58,6 +65,7 @@ done
 printf '\nLIVE_URL=%s\nHTTP_CODE=%s\n' "$LIVE_URL" "$HTTP_CODE"
 if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ]; then
   echo "Package was published, but the application is not healthy yet." >&2
+  echo "Current App Service state: $(az webapp show --resource-group "$RESOURCE_GROUP" --name "$WEBAPP_NAME" --query state -o tsv 2>/dev/null || true)" >&2
   echo "Kudu deployment status:" >&2
   curl -sS -H "Authorization: Bearer $TOKEN" "${SCM_URL}/api/deployments/latest" >&2 || true
   exit 4
