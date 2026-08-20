@@ -99,6 +99,18 @@ jobs:
           name: webapp-publish
           path: ${{ env.PUBLISH_DIR }}
 
+      - name: Check Azure OIDC secret readiness
+        id: oidc
+        shell: bash
+        env:
+          HAS_CLIENT: ${{ secrets.AZURE_CLIENT_ID != '' }}
+          HAS_TENANT: ${{ secrets.AZURE_TENANT_ID != '' }}
+          HAS_SUBSCRIPTION: ${{ secrets.AZURE_SUBSCRIPTION_ID != '' }}
+        run: |
+          echo "client=${HAS_CLIENT}" >> "$GITHUB_OUTPUT"
+          echo "tenant=${HAS_TENANT}" >> "$GITHUB_OUTPUT"
+          echo "subscription=${HAS_SUBSCRIPTION}" >> "$GITHUB_OUTPUT"
+
       - name: Azure login with OIDC
         id: azurelogin
         continue-on-error: true
@@ -160,6 +172,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LOGIN_OUTCOME: ${{ steps.azurelogin.outcome }}
           RECOVERY_OUTCOME: ${{ steps.recovery.outcome }}
+          CLIENT_PRESENT: ${{ steps.oidc.outputs.client }}
+          TENANT_PRESENT: ${{ steps.oidc.outputs.tenant }}
+          SUBSCRIPTION_PRESENT: ${{ steps.oidc.outputs.subscription }}
         run: |
           set -euo pipefail
           mkdir status-branch
@@ -169,6 +184,9 @@ jobs:
           fi
           {
             printf 'Source commit: %s\n' "$GITHUB_SHA"
+            printf 'AZURE_CLIENT_ID present: %s\n' "${CLIENT_PRESENT:-unknown}"
+            printf 'AZURE_TENANT_ID present: %s\n' "${TENANT_PRESENT:-unknown}"
+            printf 'AZURE_SUBSCRIPTION_ID present: %s\n' "${SUBSCRIPTION_PRESENT:-unknown}"
             printf 'Azure login: %s\n' "${LOGIN_OUTCOME:-unknown}"
             printf 'Recovery deploy: %s\n' "${RECOVERY_OUTCOME:-unknown}"
             printf 'Live HTTP: %s\n' "${HTTP_CODE:-unknown}"
