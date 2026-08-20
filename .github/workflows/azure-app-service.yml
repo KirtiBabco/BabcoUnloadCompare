@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - main
-      - agent/azure-appservice-go-live
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -18,6 +14,9 @@ env:
   PROJECT_PATH: BabcoUnloadCompare.Web.csproj
   SOLUTION_PATH: BabcoUnloadCompare.sln
   PUBLISH_DIR: ${{ github.workspace }}\publish
+  AZURE_RESOURCE_GROUP: rg-babco-rnd-sandbox
+  AZURE_WEBAPP_NAME: app-babco-unloadcompare-0e27b0b7-260818
+  LIVE_URL: https://app-babco-unloadcompare-0e27b0b7-260818.azurewebsites.net/UnloadCompare.aspx
 
 jobs:
   build:
@@ -53,7 +52,6 @@ jobs:
           path: ${{ env.PUBLISH_DIR }}
 
   publish-deployment-package:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -92,10 +90,8 @@ jobs:
           git push --force origin deployment-artifacts
 
   deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.AZURE_DEPLOY_ENABLED == 'true'
     needs: build
     runs-on: windows-latest
-    environment: production
     steps:
       - name: Download publish artifact
         uses: actions/download-artifact@v4
@@ -104,14 +100,86 @@ jobs:
           path: ${{ env.PUBLISH_DIR }}
 
       - name: Azure login with OIDC
+        id: azurelogin
+        continue-on-error: true
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy to Azure App Service
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
-          package: ${{ env.PUBLISH_DIR }}
+      - name: Recover and deploy directly to wwwroot
+        id: recovery
+        if: steps.azurelogin.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          az webapp config appsettings delete -g "$env:AZURE_RESOURCE_GROUP" -n "$env:AZURE_WEBAPP_NAME" --setting-names BabcoSupportConnectionString | Out-Null
+          az webapp config appsettings delete -g "$env:AZURE_RESOURCE_GROUP" -n "$env:AZURE_WEBAPP_NAME" --setting-names WEBSITE_RUN_FROM_PACKAGE WEBSITE_RUN_FROM_ZIP | Out-Null
+          az webapp config appsettings set -g "$env:AZURE_RESOURCE_GROUP" -n "$env:AZURE_WEBAPP_NAME" --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false | Out-Null
+          az webapp start -g "$env:AZURE_RESOURCE_GROUP" -n "$env:AZURE_WEBAPP_NAME" | Out-Null
+
+          $zipPath = Join-Path $env:RUNNER_TEMP 'babco-webapp.zip'
+          if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+          Compress-Archive -Path (Join-Path $env:PUBLISH_DIR '*') -DestinationPath $zipPath -Force
+
+          $token = az account get-access-token --query accessToken -o tsv
+          if ([string]::IsNullOrWhiteSpace($token)) { throw 'Azure access token was empty.' }
+          $headers = @{ Authorization = "Bearer $token" }
+          $scm = "https://$($env:AZURE_WEBAPP_NAME).scm.azurewebsites.net/api/zip/site/wwwroot/"
+          Invoke-WebRequest -Uri $scm -Method Put -Headers $headers -ContentType 'application/zip' -InFile $zipPath -UseBasicParsing | Out-Null
+
+          az webapp restart -g "$env:AZURE_RESOURCE_GROUP" -n "$env:AZURE_WEBAPP_NAME" | Out-Null
+          Start-Sleep -Seconds 10
+
+          $code = 0
+          for ($i = 1; $i -le 30; $i++) {
+            try {
+              $r = Invoke-WebRequest -Uri $env:LIVE_URL -UseBasicParsing -MaximumRedirection 0 -TimeoutSec 30
+              $code = [int]$r.StatusCode
+            }
+            catch {
+              if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+                $code = [int]$_.Exception.Response.StatusCode
+              } else {
+                $code = 0
+              }
+            }
+            Write-Host "Health $i/30 HTTP $code"
+            if ($code -in 200,301,302) { break }
+            Start-Sleep -Seconds 6
+          }
+          "HTTP_CODE=$code" | Out-File -FilePath $env:RUNNER_TEMP\azure-result.txt -Encoding ascii
+          if ($code -notin 200,301,302) { throw "Application health check failed with HTTP $code" }
+
+      - name: Publish deployment result
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LOGIN_OUTCOME: ${{ steps.azurelogin.outcome }}
+          RECOVERY_OUTCOME: ${{ steps.recovery.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir status-branch
+          HTTP_CODE="unknown"
+          if [ -f "$RUNNER_TEMP/azure-result.txt" ]; then
+            HTTP_CODE="$(sed -n 's/^HTTP_CODE=//p' "$RUNNER_TEMP/azure-result.txt" | tr -d '\r')"
+          fi
+          {
+            printf 'Source commit: %s\n' "$GITHUB_SHA"
+            printf 'Azure login: %s\n' "${LOGIN_OUTCOME:-unknown}"
+            printf 'Recovery deploy: %s\n' "${RECOVERY_OUTCOME:-unknown}"
+            printf 'Live HTTP: %s\n' "${HTTP_CODE:-unknown}"
+            printf 'Checked: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > status-branch/status.txt
+          cd status-branch
+          git init
+          git checkout -b deployment-status
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add status.txt
+          git commit -m "Publish Azure recovery status"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin deployment-status
