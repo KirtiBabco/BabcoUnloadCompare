@@ -6,10 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title><asp:ContentPlaceHolder ID="TitleContent" runat="server" /> - Babco Foods</title>
     <link rel="stylesheet" href="<%= ResolveUrl("~/Content/site.css") %>" />
+    <style>
+      .prototype-banner{position:fixed;top:0;left:0;right:0;z-index:200;height:30px;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 12px;background:#fff3cd;color:#5b4300;border-bottom:1px solid #e4c96f;font-size:12px;font-weight:800;letter-spacing:.35px;text-align:center}
+      .prototype-banner span{font-weight:600;letter-spacing:0}
+      body{padding-top:30px}
+      .sidebar{top:30px!important}
+      .sidebar-overlay{top:30px!important}
+      .entra-signout{color:#7f1d2d;text-decoration:none;font-size:10px;font-weight:700}
+      .entra-signout:hover{text-decoration:underline}
+      @media(max-width:600px){.prototype-banner{height:34px;font-size:11px;line-height:1.15}.prototype-banner span{display:none}body{padding-top:34px}.sidebar{top:34px!important}.sidebar-overlay{top:34px!important}.mobile-appbar{top:34px!important}}
+    </style>
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 </head>
 <body>
 <form id="MainForm" runat="server">
+<div class="prototype-banner" role="status" aria-label="Prototype notice"><strong>PROTOTYPE</strong><span>— This is not the final production website.</span></div>
 <div class="app-layout">
   <aside id="appSidebar" class="sidebar" aria-label="Main navigation">
     <div class="sidebar-brand">
@@ -22,7 +33,7 @@
       <a class="side-nav-link" data-nav="UnloadCompareHistory.aspx" href="<%= ResolveUrl("~/UnloadCompareHistory.aspx") %>"><span class="nav-icon">RH</span><span><b>Receiving History</b><small>Previous records</small></span></a>
     </nav>
     <div class="sidebar-spacer"></div>
-    <div class="sidebar-user"><span class="user-avatar">WU</span><div><strong>Warehouse User</strong><small>Receiving</small></div></div>
+    <div class="sidebar-user"><span class="user-avatar"><%= Server.HtmlEncode(UserInitials) %></span><div><strong><%= Server.HtmlEncode(DisplayName) %></strong><small><%= Server.HtmlEncode(AuthenticationLabel) %></small><% if (ShowSignOut) { %><a class="entra-signout" href="<%= ResolveUrl("~/.auth/logout?post_logout_redirect_uri=/") %>">Sign out</a><% } %></div></div>
   </aside>
   <div id="sidebarOverlay" class="sidebar-overlay" onclick="App.closeSidebar()"></div>
   <div class="app-main">
