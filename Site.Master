@@ -7,21 +7,34 @@
     <title><asp:ContentPlaceHolder ID="TitleContent" runat="server" /> - Babco Foods</title>
     <link rel="stylesheet" href="<%= ResolveUrl("~/Content/site.css") %>" />
     <style>
-      .prototype-banner{position:fixed;top:0;left:0;right:0;z-index:200;height:54px;display:flex;align-items:center;justify-content:center;gap:14px;padding:0 18px;background:linear-gradient(90deg,#fff9e8 0%,#fff1c7 48%,#fff8e4 100%);color:#5b4300;border-bottom:1px solid #dfc36d;box-shadow:0 2px 10px rgba(74,57,12,.08);font-size:13px;font-weight:700;letter-spacing:.1px;text-align:center}
-      .prototype-banner strong{font-size:24px;line-height:1;font-weight:900;letter-spacing:2.2px;color:#7f1d2d;text-shadow:0 1px 0 rgba(255,255,255,.8)}
-      .prototype-banner span{font-size:13px;font-weight:650;letter-spacing:.05px;color:#65511a}
-      body{padding-top:54px}
-      .sidebar{top:54px!important}
-      .sidebar-overlay{top:54px!important}
+      .standard-app-header{position:fixed;top:0;left:0;right:0;z-index:200;height:70px;display:grid;grid-template-columns:minmax(210px,1fr) auto minmax(230px,1fr);align-items:center;gap:16px;padding:0 22px;background:linear-gradient(90deg,#ffffff 0%,#fff7e1 46%,#ffffff 100%);border-bottom:1px solid #dfc36d;box-shadow:0 2px 12px rgba(74,57,12,.10)}
+      .std-brand{display:flex;align-items:center;gap:12px;min-width:0}
+      .std-brand-mark{width:42px;height:42px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;background:#7f1d2d;color:#fff;font-size:20px;font-weight:900;box-shadow:0 4px 12px rgba(127,29,45,.22)}
+      .std-brand-text strong{display:block;font-size:17px;line-height:1.1;color:#211a14;font-weight:900;letter-spacing:.1px;white-space:nowrap}
+      .std-brand-text small{display:block;margin-top:3px;font-size:11px;color:#7a6a54;font-weight:750;letter-spacing:.35px;text-transform:uppercase;white-space:nowrap}
+      .prototype-banner{justify-self:center;display:flex;align-items:center;justify-content:center;gap:14px;min-height:44px;padding:8px 20px;background:linear-gradient(90deg,#fff4bf 0%,#ffe8a0 48%,#fff4bf 100%);color:#5b4300;border:1px solid #d6b14a;border-left:6px solid #7f1d2d;border-radius:14px;box-shadow:0 2px 10px rgba(74,57,12,.08);text-align:center}
+      .prototype-banner strong{font-size:25px;line-height:1;font-weight:950;letter-spacing:2.2px;color:#7f1d2d;text-shadow:0 1px 0 rgba(255,255,255,.8)}
+      .prototype-banner span{font-size:13px;font-weight:750;letter-spacing:.05px;color:#65511a}
+      .std-mode-note{justify-self:end;text-align:right;display:flex;flex-direction:column;gap:2px;color:#5f4b00}
+      .std-mode-note strong{font-size:12px;font-weight:900;letter-spacing:.7px;text-transform:uppercase;color:#7f1d2d;white-space:nowrap}
+      .std-mode-note small{font-size:10px;font-weight:700;color:#7b6b52;white-space:nowrap}
+      body{padding-top:70px}
+      .sidebar{top:70px!important}
+      .sidebar-overlay{top:70px!important}
       .entra-signout{color:#7f1d2d;text-decoration:none;font-size:10px;font-weight:700}
       .entra-signout:hover{text-decoration:underline}
-      @media(max-width:600px){.prototype-banner{height:48px;padding:0 10px}.prototype-banner strong{font-size:19px;letter-spacing:1.7px}.prototype-banner span{display:none}body{padding-top:48px}.sidebar{top:48px!important}.sidebar-overlay{top:48px!important}.mobile-appbar{top:48px!important}}
+      @media(max-width:900px){.standard-app-header{grid-template-columns:1fr auto;height:64px;padding:0 14px}.std-brand-mark{width:36px;height:36px;border-radius:12px;font-size:18px}.std-brand-text strong{font-size:15px}.std-brand-text small{display:none}.prototype-banner{justify-self:end;gap:8px;padding:8px 12px;min-height:38px}.prototype-banner strong{font-size:19px;letter-spacing:1.7px}.prototype-banner span{display:none}.std-mode-note{display:none}body{padding-top:64px}.sidebar{top:64px!important}.sidebar-overlay{top:64px!important}.mobile-appbar{top:64px!important}}
+      @media(max-width:520px){.standard-app-header{height:58px}.std-brand-text strong{font-size:13px}.prototype-banner strong{font-size:17px}body{padding-top:58px}.sidebar{top:58px!important}.sidebar-overlay{top:58px!important}.mobile-appbar{top:58px!important}}
     </style>
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 </head>
 <body>
 <form id="MainForm" runat="server">
-<div class="prototype-banner" role="status" aria-label="Prototype notice"><strong>PROTOTYPE</strong><span>— This is a prototype and not the final production website.</span></div>
+<header class="standard-app-header" role="banner" aria-label="Standard project header">
+  <div class="std-brand"><span class="std-brand-mark">B</span><div class="std-brand-text"><strong>Babco Foods</strong><small>Warehouse Operations</small></div></div>
+  <div class="prototype-banner" role="status" aria-label="Prototype notice"><strong>PROTOTYPE</strong><span>— This is a prototype and not the final production website.</span></div>
+  <div class="std-mode-note"><strong>Without AI</strong><small>Manual business workflow website</small></div>
+</header>
 <div class="app-layout">
   <aside id="appSidebar" class="sidebar" aria-label="Main navigation">
     <div class="sidebar-brand">
