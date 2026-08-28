@@ -45,14 +45,6 @@ jobs:
           Copy-Item "$packageTmp\*" "${{ env.PUBLISH_DIR }}" -Recurse -Force
           if (-not (Test-Path "${{ env.PUBLISH_DIR }}\Web.config")) { throw "Staged publish Web.config was not produced." }
 
-          $logoDir = Join-Path "${{ env.PUBLISH_DIR }}" "Content"
-          New-Item -ItemType Directory -Path $logoDir -Force | Out-Null
-          $logoPath = Join-Path $logoDir "babco-labs-logo.svg"
-          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/babcofoods/Email-Teams-Follow-Up-Capture/main/app/assets/babco-labs-logo.svg" -OutFile $logoPath -UseBasicParsing
-          if (-not (Test-Path $logoPath)) { throw "Canonical Babco Labs SVG was not downloaded." }
-          $logoText = Get-Content $logoPath -Raw
-          if ($logoText -notmatch '<svg' -or $logoText.Length -lt 1000) { throw "Canonical Babco Labs SVG validation failed." }
-
       - name: Upload publish artifact
         uses: actions/upload-artifact@v4
         with:
@@ -73,8 +65,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -s publish/Content/babco-labs-logo.svg
-          grep -Fq '<svg' publish/Content/babco-labs-logo.svg
           cd publish
           zip -qr ../webapp-publish.zip .
           cd ..
