@@ -9,9 +9,7 @@
     <style>
       .standard-app-header{position:fixed;top:0;left:0;right:0;z-index:200;height:76px;display:grid;grid-template-columns:minmax(270px,1fr) auto minmax(330px,1fr);align-items:center;gap:18px;padding:0 22px;background:linear-gradient(90deg,#ffffff 0%,#fff8e8 48%,#ffffff 100%);border-bottom:1px solid #dec16a;box-shadow:0 3px 16px rgba(74,57,12,.10)}
       .std-brand{display:flex;align-items:center;gap:11px;min-width:0;height:56px}
-      .std-brand-fallback{width:48px;height:48px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;background:#7f1d2d;color:#fff;font-size:18px;font-weight:950;letter-spacing:-1px;box-shadow:0 4px 12px rgba(127,29,45,.22);flex:0 0 auto}
-      .std-labs-logo{display:none;width:168px;height:auto;max-height:52px;object-fit:contain;object-position:left center;flex:0 0 auto}
-      .std-brand.logo-ready .std-brand-fallback{display:none}.std-brand.logo-ready .std-labs-logo{display:block}
+      .std-labs-logo{display:block;width:168px;height:auto;max-height:52px;object-fit:contain;object-position:left center;flex:0 0 auto}
       .std-brand-text{min-width:0;padding-left:10px;border-left:1px solid #eadfbf;padding-top:3px;padding-bottom:3px}
       .std-brand-text strong{display:block;font-size:13px;line-height:1.1;color:#211a14;font-weight:900;letter-spacing:.15px;white-space:nowrap}
       .std-brand-text small{display:block;margin-top:4px;font-size:10px;color:#7a6a54;font-weight:750;letter-spacing:.3px;text-transform:uppercase;white-space:nowrap}
@@ -31,7 +29,7 @@
       .sidebar-user{margin:10px 11px 14px!important;padding:11px!important;border:1px solid #eee3cf!important;border-radius:14px!important;background:linear-gradient(145deg,#fffdf8,#fff8e9)!important;box-shadow:0 4px 14px rgba(45,35,20,.06)!important}.sidebar-user .user-avatar{box-shadow:0 3px 9px rgba(127,29,45,.16)}.sidebar-user strong{max-width:140px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sidebar-user small{font-weight:700}
       @media(max-width:1100px){.standard-app-header{grid-template-columns:minmax(190px,.8fr) auto minmax(170px,.7fr);gap:10px;padding:0 14px}.std-labs-logo{width:132px}.std-brand-text small{display:none}.std-mode-note{display:none}.std-user-card{grid-template-columns:36px auto;padding-right:7px}.std-user-avatar{width:36px;height:36px}.std-user-meta small,.std-signout{display:none}.std-user-meta strong{max-width:115px}.prototype-banner{padding:8px 14px}.prototype-banner span{font-size:11px}}
       @media(max-width:760px){.standard-app-header{height:64px;grid-template-columns:auto 1fr auto;padding:0 10px}.std-brand{height:48px}.std-labs-logo{width:104px;max-height:43px}.std-brand-text{display:none}.prototype-banner{justify-self:center;gap:7px;padding:7px 10px;min-height:38px}.prototype-banner strong{font-size:18px;letter-spacing:1.5px}.prototype-banner span{display:none}.std-user-card{display:flex;padding:5px;border-radius:12px;min-height:0}.std-user-meta{display:none}.std-user-avatar{width:34px;height:34px;border-radius:10px}body{padding-top:64px}.sidebar{top:64px!important}.sidebar-overlay{top:64px!important}.mobile-appbar{top:64px!important}}
-      @media(max-width:480px){.standard-app-header{height:58px}.std-labs-logo{width:90px}.std-brand-fallback{width:34px;height:34px;border-radius:10px;font-size:13px}.prototype-banner strong{font-size:16px}.std-user-avatar{width:31px;height:31px;font-size:11px}body{padding-top:58px}.sidebar{top:58px!important}.sidebar-overlay{top:58px!important}.mobile-appbar{top:58px!important}}
+      @media(max-width:480px){.standard-app-header{height:58px}.std-labs-logo{width:90px}.prototype-banner strong{font-size:16px}.std-user-avatar{width:31px;height:31px;font-size:11px}body{padding-top:58px}.sidebar{top:58px!important}.sidebar-overlay{top:58px!important}.mobile-appbar{top:58px!important}}
     </style>
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
 </head>
@@ -39,8 +37,7 @@
 <form id="MainForm" runat="server">
 <header class="standard-app-header" role="banner" aria-label="Babco standard project header">
   <div class="std-brand" id="stdBrand">
-    <span class="std-brand-fallback" aria-hidden="true">BL</span>
-    <img id="stdLabsLogo" class="std-labs-logo" src="https://raw.githubusercontent.com/babcofoods/Email-Teams-Follow-Up-Capture/main/app/assets/babco-labs-logo.svg" alt="Babco Labs" width="168" height="43" onload="document.getElementById('stdBrand').classList.add('logo-ready')" onerror="document.getElementById('stdBrand').classList.remove('logo-ready')" />
+    <img id="stdLabsLogo" class="std-labs-logo" src="<%= ResolveUrl("~/Content/babco-labs-logo.svg") %>" alt="Babco Labs" width="168" height="43" />
     <div class="std-brand-text"><strong>Babco Foods</strong><small>Warehouse Operations</small></div>
   </div>
   <div class="prototype-banner" role="status" aria-label="Prototype notice"><strong>PROTOTYPE</strong><span>— This is a prototype and not the final production website.</span></div>
