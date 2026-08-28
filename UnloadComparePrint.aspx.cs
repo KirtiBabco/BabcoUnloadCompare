@@ -27,7 +27,7 @@ namespace BabcoUnloadCompare.Web
 
             var b = new StringBuilder();
             b.Append("<div class='meta'>")
-             .Append("<div><small>PO</small>").Append(E(details.Header.PONumber)).Append("</div>")
+             .Append("<div><small>PackingSlip</small>").Append(E(details.Header.PONumber)).Append("</div>")
              .Append("<div><small>Vendor</small>").Append(E(details.Header.VendorName)).Append("</div>")
              .Append("<div><small>Container</small>").Append(E(details.Header.ContainerNumber)).Append("</div>")
              .Append("<div><small>Receiving Date</small>").Append(details.Header.ReceivingDate.ToString("yyyy-MM-dd")).Append("</div>")

@@ -30,7 +30,7 @@
       <button type="button" class="sidebar-close" aria-label="Close menu" onclick="App.closeSidebar()">×</button>
     </div>
     <nav class="side-nav">
-      <a class="side-nav-link" data-nav="UnloadCompare.aspx" href="<%= ResolveUrl("~/UnloadCompare.aspx") %>"><span class="nav-icon">UC</span><span><b>Unload Compare</b><small>PO receiving & count</small></span></a>
+      <a class="side-nav-link" data-nav="UnloadCompare.aspx" href="<%= ResolveUrl("~/UnloadCompare.aspx") %>"><span class="nav-icon">UC</span><span><b>Unload Compare</b><small>PackingSlip receiving & count</small></span></a>
       <a class="side-nav-link" data-nav="UnloadCompareHistory.aspx" href="<%= ResolveUrl("~/UnloadCompareHistory.aspx") %>"><span class="nav-icon">RH</span><span><b>Receiving History</b><small>Previous records</small></span></a>
     </nav>
     <div class="sidebar-spacer"></div>
@@ -47,6 +47,57 @@
 </div>
 </form>
 <script src="<%= ResolveUrl("~/Scripts/common.js") %>"></script>
+<script>
+(function(){
+  function labelText(value){
+    if(!value)return value;
+    return String(value).replace(/\bPO Number\b/g,'PackingSlip').replace(/\bPO\b/g,'PackingSlip');
+  }
+  function applyLabels(root){
+    if(!root)return;
+    var walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null);
+    var nodes=[];
+    while(walker.nextNode())nodes.push(walker.currentNode);
+    nodes.forEach(function(n){
+      var p=n.parentNode;
+      if(!p||/^(SCRIPT|STYLE)$/i.test(p.nodeName))return;
+      var v=labelText(n.nodeValue);
+      if(v!==n.nodeValue)n.nodeValue=v;
+    });
+    if(root.querySelectorAll){
+      root.querySelectorAll('[placeholder],[title],[aria-label],input[type="button"],input[type="submit"]').forEach(function(el){
+        ['placeholder','title','aria-label','value'].forEach(function(a){
+          if(!el.hasAttribute(a))return;
+          var old=el.getAttribute(a),v=labelText(old);
+          if(v!==old)el.setAttribute(a,v);
+        });
+      });
+    }
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    applyLabels(document.body);
+    new MutationObserver(function(changes){
+      changes.forEach(function(m){
+        if(m.type==='characterData'){
+          var p=m.target.parentNode;
+          if(p&&!/^(SCRIPT|STYLE)$/i.test(p.nodeName)){
+            var v=labelText(m.target.nodeValue);
+            if(v!==m.target.nodeValue)m.target.nodeValue=v;
+          }
+        }else if(m.type==='childList'){
+          Array.prototype.forEach.call(m.addedNodes,function(n){
+            if(n.nodeType===1)applyLabels(n);
+            else if(n.nodeType===3&&n.parentNode)applyLabels(n.parentNode);
+          });
+        }else if(m.type==='attributes'){
+          var old=m.target.getAttribute(m.attributeName),v=labelText(old);
+          if(v!==old)m.target.setAttribute(m.attributeName,v);
+        }
+      });
+    }).observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','title','aria-label','value']});
+  });
+})();
+</script>
 <asp:ContentPlaceHolder ID="ScriptContent" runat="server" />
 </body>
 </html>
