@@ -1,4 +1,5 @@
 window.App={
+ version:'1.3.0',
  post:function(url,method,data){return fetch(url+'/'+method,{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},body:JSON.stringify(data||{})}).then(function(r){if(!r.ok)throw new Error('Request failed');return r.json();}).then(function(x){return x.d;});},
  toast:function(msg,bad){var t=document.getElementById('toast');if(!t){alert(msg);return;}t.textContent=msg;t.className='toast '+(bad?'bad':'good');setTimeout(function(){t.className='toast hidden';},3400);},
  fmtDate:function(v){if(!v)return '';var m=/Date\((\d+)\)/.exec(v);var d=m?new Date(+m[1]):new Date(v);return isNaN(d.getTime())?'':d.toISOString().slice(0,10);},
@@ -6,6 +7,9 @@ window.App={
  qs:function(k){return new URLSearchParams(location.search).get(k);},
  openSidebar:function(){document.body.classList.add('sidebar-open');},
  closeSidebar:function(){document.body.classList.remove('sidebar-open');},
- setActiveNav:function(){var file=(location.pathname.split('/').pop()||'Default.aspx').toLowerCase();if(file==='default.aspx'||file==='')file='unloadcompare.aspx';if(file==='unloadcomparedetails.aspx'||file==='unloadcompareprint.aspx')file='unloadcomparehistory.aspx';document.querySelectorAll('.side-nav-link').forEach(function(a){var target=(a.getAttribute('data-nav')||'').toLowerCase();a.classList.toggle('active',target===file);});}
+ setActiveNav:function(){var file=(location.pathname.split('/').pop()||'Default.aspx').toLowerCase();if(file==='default.aspx'||file==='')file='unloadcompare.aspx';if(file==='unloadcomparedetails.aspx'||file==='unloadcompareprint.aspx')file='unloadcomparehistory.aspx';document.querySelectorAll('.side-nav-link').forEach(function(a){var target=(a.getAttribute('data-nav')||'').toLowerCase();a.classList.toggle('active',target===file);});},
+ openFeedback:function(){var m=document.getElementById('feedbackModal');if(!m)return;m.classList.remove('hidden');var c=document.getElementById('feedbackComments');if(c)setTimeout(function(){c.focus();},50);},
+ closeFeedback:function(){var m=document.getElementById('feedbackModal');if(m)m.classList.add('hidden');},
+ submitFeedback:function(e){if(e)e.preventDefault();var type=document.getElementById('feedbackType'),rating=document.getElementById('feedbackRating'),comments=document.getElementById('feedbackComments'),btn=document.getElementById('feedbackSubmitBtn');if(!comments||!comments.value.trim()){App.toast('Please enter feedback comments.',true);return false;}if(btn){btn.disabled=true;btn.textContent='Saving...';}App.post('UnloadCompare.aspx','SaveFeedback',{type:type?type.value:'General',rating:rating?parseInt(rating.value,10):5,comments:comments.value.trim(),pageUrl:location.pathname+location.search}).then(function(r){if(!r.IsSuccess)throw new Error(r.Message);comments.value='';App.closeFeedback();App.toast(r.Message||'Feedback saved.');}).catch(function(err){App.toast(err.message||'Feedback could not be saved.',true);}).finally(function(){if(btn){btn.disabled=false;btn.textContent='Submit Feedback';}});return false;}
 };
-document.addEventListener('DOMContentLoaded',function(){App.setActiveNav();});
+document.addEventListener('DOMContentLoaded',function(){App.setActiveNav();var f=document.getElementById('feedbackForm');if(f)f.addEventListener('submit',App.submitFeedback);document.addEventListener('keydown',function(e){if(e.key==='Escape')App.closeFeedback();});});
