@@ -7,7 +7,7 @@ namespace BabcoUnloadCompare.Web
 {
  public partial class UnloadCompare:System.Web.UI.Page
  {
-  public const string AppVersion="1.3.0";
+  public const string AppVersion="1.3.1";
   protected void Page_Load(object sender,EventArgs e){if(Session["UserName"]==null)Session["UserName"]="Warehouse User";}
   [WebMethod] public static ApiResult<object> SearchPO(string query){try{return new ApiResult<object>{IsSuccess=true,Data=new DataAccess().SearchPO(query??"")};}catch(Exception ex){return Fail(ex);}}
   [WebMethod] public static ApiResult<object> LoadPO(string poNumber){try{var d=new DataAccess().LoadPO(poNumber);return d==null?new ApiResult<object>{IsSuccess=false,Message="PO was not found."}:new ApiResult<object>{IsSuccess=true,Data=d};}catch(Exception ex){return Fail(ex);}}
