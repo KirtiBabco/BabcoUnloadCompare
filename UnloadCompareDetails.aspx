@@ -1,11 +1,11 @@
 <%@ Page Title="Unload Compare Details" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="UnloadCompareDetails.aspx.cs" Inherits="BabcoUnloadCompare.Web.UnloadCompareDetails" %>
 <asp:Content ID="t" ContentPlaceHolderID="TitleContent" runat="server">Unload Compare Details</asp:Content>
 <asp:Content ID="m" ContentPlaceHolderID="MainContent" runat="server">
-<section class="hero-row"><div><a class="back-link" href="UnloadCompareHistory.aspx">← Receiving History</a><h1 id="detailTitle">Unload Compare Details</h1><p>Read-only comparison, documents, verification and audit trail.</p></div><div><button type="button" class="btn" onclick="UCD.exportExcel()">Download Excel</button><button type="button" class="btn" onclick="UCD.printReport()">Print</button></div></section>
+<section class="hero-row"><div><a class="back-link" href="UnloadCompareHistory.aspx">&larr; Receiving History</a><h1 id="detailTitle">Unload Compare Details</h1><p>Read-only comparison, documents, verification and audit trail.</p></div><div><button type="button" class="btn" onclick="UCD.exportExcel()">Download Excel</button><button type="button" class="btn" onclick="UCD.printReport()">Print</button></div></section>
 <section id="detailSummary" class="card po-summary"></section>
 <section class="card grid-card"><div class="grid-head"><h2>Quantity Comparison</h2><div id="detailMetrics" class="metric-strip"></div></div><div class="table-wrap"><table><thead id="detailHead"></thead><tbody id="detailBody"></tbody></table></div></section>
 <div class="detail-columns"><section class="card"><h2>Receiving Sheets</h2><div id="documents"></div><p class="hint">OCR/AI-extracted data must be reviewed by a human before it can become final quantity data.</p></section><section class="card"><h2>Verification</h2><div id="verificationInfo"></div><label>Verification Notes</label><textarea id="verifyNotes" class="input" rows="4"></textarea><div class="button-row"><button type="button" id="verifyBtn" class="btn success" onclick="UCD.verify()">Verify Record</button><button type="button" id="completeBtn" class="btn primary" onclick="UCD.complete()">Mark Completed</button></div></section></div>
 <section class="card"><h2>Audit Trail</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Action</th><th>Entity</th><th>Field</th><th>Old</th><th>New</th><th>User</th></tr></thead><tbody id="auditBody"></tbody></table></div></section>
 <div id="toast" class="toast hidden"></div>
 </asp:Content>
-<asp:Content ID="s" ContentPlaceHolderID="ScriptContent" runat="server"><script src="Scripts/details.js"></script></asp:Content>
+<asp:Content ID="s" ContentPlaceHolderID="ScriptContent" runat="server"><script src="Scripts/details.js?v=1.3.1"></script></asp:Content>
