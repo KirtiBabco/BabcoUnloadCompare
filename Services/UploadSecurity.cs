@@ -9,7 +9,7 @@ namespace BabcoUnloadCompare.Web.Services
     public static class UploadSecurity
     {
         public static readonly string[] ExcelExt = { ".xls", ".xlsx" };
-        public static readonly string[] DocumentExt = { ".pdf", ".jpg", ".jpeg", ".png" };
+        public static readonly string[] DocumentExt = { ".pdf", ".jpg", ".jpeg", ".png", ".webp" };
         public static string SafeFileName(string fileName) { return Path.GetFileName(fileName ?? "upload").Replace("..", "_").Replace("\r", "_").Replace("\n", "_").Replace("\"", "_"); }
         public static void Validate(HttpPostedFile file, IEnumerable<string> allowed)
         {
