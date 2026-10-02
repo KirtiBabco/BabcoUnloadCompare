@@ -53,20 +53,37 @@ jobs:
           done
 
           PLAN07="/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/serverfarms/plan-resolvedesk-kirti20260807"
-          PLAN07_APPS="$(az webapp list -g "$RG" --query "[?serverFarmId=='$PLAN07'].name" -o tsv)"
-          test "$PLAN07_APPS" = "app-resolvedesk-kirti20260807"
+          APP07="/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/app-resolvedesk-kirti20260807"
+          PLAN_EXISTS=false
+          APP_EXISTS=false
+          az resource show --ids "$PLAN07" >/dev/null 2>&1 && PLAN_EXISTS=true
+          az resource show --ids "$APP07" >/dev/null 2>&1 && APP_EXISTS=true
+          if [ "$PLAN_EXISTS" != "$APP_EXISTS" ]; then
+            echo "Safety stop: ResolveDesk Aug 7 app/plan partial state is inconsistent."
+            exit 32
+          fi
+          if [ "$APP_EXISTS" = true ]; then
+            PLAN07_APPS="$(az webapp list -g "$RG" --query "[?serverFarmId=='$PLAN07'].name" -o tsv)"
+            test "$PLAN07_APPS" = "app-resolvedesk-kirti20260807"
+          fi
 
-          UNEXPECTED="$(az sql db list -g "$RG" -s sql-resolvedesk-kirti20260807 --query "[?name!='master' && name!='ResolveDeskDb'].name" -o tsv)"
-          test -z "$UNEXPECTED"
-          az sql db show -g "$RG" -s sql-resolvedesk-kirti20260807 -n ResolveDeskDb >/dev/null
+          if az sql server show -g "$RG" -n sql-resolvedesk-kirti20260807 >/dev/null 2>&1; then
+            UNEXPECTED="$(az sql db list -g "$RG" -s sql-resolvedesk-kirti20260807 --query "[?name!='master' && name!='ResolveDeskDb'].name" -o tsv)"
+            test -z "$UNEXPECTED"
+            az sql db show -g "$RG" -s sql-resolvedesk-kirti20260807 -n ResolveDeskDb >/dev/null
+          fi
 
-          UNEXPECTED="$(az sql db list -g "$RG" -s sql-babco-unloadcompare-0e27b0b7-260814 --query "[?name!='master' && name!='BabcoUnloadCompareDb'].name" -o tsv)"
-          test -z "$UNEXPECTED"
-          az sql db show -g "$RG" -s sql-babco-unloadcompare-0e27b0b7-260814 -n BabcoUnloadCompareDb >/dev/null
+          if az sql server show -g "$RG" -n sql-babco-unloadcompare-0e27b0b7-260814 >/dev/null 2>&1; then
+            UNEXPECTED="$(az sql db list -g "$RG" -s sql-babco-unloadcompare-0e27b0b7-260814 --query "[?name!='master' && name!='BabcoUnloadCompareDb'].name" -o tsv)"
+            test -z "$UNEXPECTED"
+            az sql db show -g "$RG" -s sql-babco-unloadcompare-0e27b0b7-260814 -n BabcoUnloadCompareDb >/dev/null
+          fi
 
-          WS_COUNT="$(az resource list -g "$WORKSPACE_RG" --query "length(@)" -o tsv)"
-          test "$WS_COUNT" = "1"
-          az resource show --ids "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$WORKSPACE_RG/providers/Microsoft.OperationalInsights/workspaces/managed-appi-resolvedesk-kirti20260807-ws" >/dev/null
+          WORKSPACE_ID="/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$WORKSPACE_RG/providers/Microsoft.OperationalInsights/workspaces/managed-appi-resolvedesk-kirti20260807-ws"
+          if az resource show --ids "$WORKSPACE_ID" >/dev/null 2>&1; then
+            WS_COUNT="$(az resource list -g "$WORKSPACE_RG" --query "length(@)" -o tsv)"
+            test "$WS_COUNT" = "1"
+          fi
 
           CURRENT_SETTINGS="$(az webapp config appsettings list -g "$RG" -n app-babco-unloadcompare-0e27b0b7-260818 -o json)"
           CURRENT_CONN="$(az webapp config connection-string list -g "$RG" -n app-babco-unloadcompare-0e27b0b7-260818 -o json)"
@@ -109,8 +126,16 @@ jobs:
           delete_id "ResolveDesk Aug 7 smart detector alert" "$P/microsoft.alertsmanagement/smartDetectorAlertRules/Failure Anomalies - appi-resolvedesk-kirti20260807"
           delete_id "ResolveDesk Aug 7 Application Insights" "$P/Microsoft.Insights/components/appi-resolvedesk-kirti20260807"
 
-          W="/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$WORKSPACE_RG/providers/Microsoft.OperationalInsights/workspaces/managed-appi-resolvedesk-kirti20260807-ws"
-          delete_id "ResolveDesk Aug 7 dedicated Log Analytics workspace" "$W"
+          if az monitor log-analytics workspace show -g "$WORKSPACE_RG" -n managed-appi-resolvedesk-kirti20260807-ws >/dev/null 2>&1; then
+            echo "Deleting permanently: ResolveDesk Aug 7 dedicated Log Analytics workspace"
+            az monitor log-analytics workspace delete \
+              --resource-group "$WORKSPACE_RG" \
+              --workspace-name managed-appi-resolvedesk-kirti20260807-ws \
+              --force \
+              --yes
+          else
+            echo "Already absent: ResolveDesk Aug 7 dedicated Log Analytics workspace"
+          fi
 
       - name: Verify retirement and KEEP resources
         shell: bash
