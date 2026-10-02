@@ -1,0 +1,8 @@
+Source commit: 15288b0eb99b4711f0cc63a1d8a0bb8c02a6a3c6
+AZURE_CLIENT_ID present: false
+AZURE_TENANT_ID present: false
+AZURE_SUBSCRIPTION_ID present: false
+Azure login: failure
+Recovery deploy: skipped
+Live HTTP: unknown
+Checked: 2026-10-02T05:58:04Z
