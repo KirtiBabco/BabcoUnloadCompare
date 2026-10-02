@@ -1,0 +1,164 @@
+name: Retire approved Azure resources 2026-10-02
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/retire-approved-20261002.yml
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  EXPECTED_SUBSCRIPTION_ID: 0e27b0b7-22b9-4e96-8faa-897ca9f09e9c
+  RG: rg-babco-rnd-sandbox
+
+jobs:
+  retire-approved:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure login with existing OIDC identity
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Safety checks and retire exact approved resources
+        shell: bash
+        env:
+          LOGIN_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        run: |
+          set -euo pipefail
+
+          ACTUAL_SUB="$(az account show --query id -o tsv)"
+          if [ "$ACTUAL_SUB" != "$EXPECTED_SUBSCRIPTION_ID" ]; then
+            echo "Wrong subscription: $ACTUAL_SUB"
+            exit 10
+          fi
+
+          keep_ids=(
+            "/subscriptions/$EXPECTED_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/app-resolvedesk-kirti20260810"
+            "/subscriptions/$EXPECTED_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/serverFarms/plan-resolvedesk-kirti20260810"
+            "/subscriptions/$EXPECTED_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/sites/app-babco-unloadcompare-0e27b0b7-260818"
+            "/subscriptions/$EXPECTED_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Sql/servers/sql-babco-unloadcompare-0e27b0b7-260818"
+            "/subscriptions/$EXPECTED_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.App/managedEnvironments/cae-babco-hrms-rnd"
+            "/subscriptions/$EXPECTED_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.App/managedEnvironments/managedEnvironment-rgbabcorndsandb-87e7"
+            "/subscriptions/$EXPECTED_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.App/containerApps/price"
+          )
+          for id in "${keep_ids[@]}"; do
+            az resource show --ids "$id" >/dev/null
+          done
+
+          PLAN07="/subscriptions/$EXPECTED_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/serverfarms/plan-resolvedesk-kirti20260807"
+          PLAN07_APPS="$(az webapp list -g "$RG" --query "[?serverFarmId=='$PLAN07'].name" -o tsv)"
+          if [ "$PLAN07_APPS" != "app-resolvedesk-kirti20260807" ]; then
+            echo "Safety stop: ResolveDesk Aug 7 plan hosts unexpected apps: $PLAN07_APPS"
+            exit 11
+          fi
+
+          az sql db show -g "$RG" -s sql-resolvedesk-kirti20260807 -n ResolveDeskDb >/dev/null
+          UNEXPECTED="$(az sql db list -g "$RG" -s sql-resolvedesk-kirti20260807 --query "[?name!='master' && name!='ResolveDeskDb'].name" -o tsv)"
+          if [ -n "$UNEXPECTED" ]; then
+            echo "Safety stop: unexpected DB on ResolveDesk Aug 7 server: $UNEXPECTED"
+            exit 12
+          fi
+
+          az sql db show -g "$RG" -s sql-babco-unloadcompare-0e27b0b7-260814 -n BabcoUnloadCompareDb >/dev/null
+          UNEXPECTED="$(az sql db list -g "$RG" -s sql-babco-unloadcompare-0e27b0b7-260814 --query "[?name!='master' && name!='BabcoUnloadCompareDb'].name" -o tsv)"
+          if [ -n "$UNEXPECTED" ]; then
+            echo "Safety stop: unexpected DB on Unload Aug 14 server: $UNEXPECTED"
+            exit 13
+          fi
+
+          DELETE_OLD_STORAGE=true
+          CURRENT_APP_SETTINGS="$(az webapp config appsettings list -g "$RG" -n app-babco-unloadcompare-0e27b0b7-260818 -o json)"
+          CURRENT_CONN="$(az webapp config connection-string list -g "$RG" -n app-babco-unloadcompare-0e27b0b7-260818 -o json)"
+          if printf '%s\n%s' "$CURRENT_APP_SETTINGS" "$CURRENT_CONN" | grep -qi "stunload0e27b0b7260814"; then
+            DELETE_OLD_STORAGE=false
+            echo "Old storage account is referenced by KEEP app; storage deletion will be skipped."
+          fi
+
+          DELETE_OLD_UAMI=true
+          if az identity show -g "$RG" -n id-babco-unloadcompare-gha-260814 >/dev/null 2>&1; then
+            UAMI_CLIENT_ID="$(az identity show -g "$RG" -n id-babco-unloadcompare-gha-260814 --query clientId -o tsv)"
+            if [ "$UAMI_CLIENT_ID" = "$LOGIN_CLIENT_ID" ]; then
+              DELETE_OLD_UAMI=false
+              echo "Old-named UAMI is still the active GitHub OIDC login identity; identity deletion will be skipped."
+            fi
+          fi
+
+          delete_id () {
+            local label="$1"
+            local id="$2"
+            if az resource show --ids "$id" >/dev/null 2>&1; then
+              echo "Deleting: $label"
+              az resource delete --ids "$id"
+            else
+              echo "Already absent: $label"
+            fi
+          }
+
+          SUB="/subscriptions/$EXPECTED_SUBSCRIPTION_ID/resourceGroups/$RG/providers"
+
+          delete_id "Unload stager container app" "$SUB/Microsoft.App/containerApps/ca-unload-stager-260814"
+          delete_id "hello-8811 container app" "$SUB/Microsoft.App/containerApps/hello-8811"
+
+          delete_id "Unload Aug 14 web app" "$SUB/Microsoft.Web/sites/app-babco-unloadcompare-0e27b0b7-260814"
+          delete_id "Unload old Static Web App" "$SUB/Microsoft.Web/staticSites/BabcoUnloadCompare"
+          delete_id "Unload Aug 14 SQL server and database" "$SUB/Microsoft.Sql/servers/sql-babco-unloadcompare-0e27b0b7-260814"
+
+          if [ "$DELETE_OLD_STORAGE" = true ]; then
+            delete_id "Unload Aug 14 storage" "$SUB/Microsoft.Storage/storageAccounts/stunload0e27b0b7260814"
+          fi
+          if [ "$DELETE_OLD_UAMI" = true ]; then
+            delete_id "Unload Aug 14 deployment identity" "$SUB/Microsoft.ManagedIdentity/userAssignedIdentities/id-babco-unloadcompare-gha-260814"
+          fi
+
+          delete_id "ResolveDesk Aug 7 web app" "$SUB/Microsoft.Web/sites/app-resolvedesk-kirti20260807"
+          delete_id "ResolveDesk Aug 7 App Service plan" "$SUB/Microsoft.Web/serverFarms/plan-resolvedesk-kirti20260807"
+          delete_id "ResolveDesk Aug 7 SQL server and database" "$SUB/Microsoft.Sql/servers/sql-resolvedesk-kirti20260807"
+          delete_id "ResolveDesk Aug 7 smart detector alert" "$SUB/microsoft.alertsmanagement/smartDetectorAlertRules/Failure Anomalies - appi-resolvedesk-kirti20260807"
+          delete_id "ResolveDesk Aug 7 Application Insights" "$SUB/Microsoft.Insights/components/appi-resolvedesk-kirti20260807"
+
+          must_be_absent=(
+            "$SUB/Microsoft.App/containerApps/ca-unload-stager-260814"
+            "$SUB/Microsoft.App/containerApps/hello-8811"
+            "$SUB/Microsoft.Web/sites/app-babco-unloadcompare-0e27b0b7-260814"
+            "$SUB/Microsoft.Web/staticSites/BabcoUnloadCompare"
+            "$SUB/Microsoft.Sql/servers/sql-babco-unloadcompare-0e27b0b7-260814"
+            "$SUB/Microsoft.Web/sites/app-resolvedesk-kirti20260807"
+            "$SUB/Microsoft.Web/serverFarms/plan-resolvedesk-kirti20260807"
+            "$SUB/Microsoft.Sql/servers/sql-resolvedesk-kirti20260807"
+            "$SUB/Microsoft.Insights/components/appi-resolvedesk-kirti20260807"
+          )
+          if [ "$DELETE_OLD_STORAGE" = true ]; then
+            must_be_absent+=("$SUB/Microsoft.Storage/storageAccounts/stunload0e27b0b7260814")
+          fi
+          if [ "$DELETE_OLD_UAMI" = true ]; then
+            must_be_absent+=("$SUB/Microsoft.ManagedIdentity/userAssignedIdentities/id-babco-unloadcompare-gha-260814")
+          fi
+
+          for id in "${must_be_absent[@]}"; do
+            for attempt in $(seq 1 30); do
+              if ! az resource show --ids "$id" >/dev/null 2>&1; then
+                break
+              fi
+              sleep 10
+            done
+            if az resource show --ids "$id" >/dev/null 2>&1; then
+              echo "Deletion verification failed: $id"
+              exit 20
+            fi
+          done
+
+          for id in "${keep_ids[@]}"; do
+            az resource show --ids "$id" >/dev/null
+          done
+
+          echo "Approved retirement completed and KEEP resources verified."
+          echo "DELETE_OLD_STORAGE=$DELETE_OLD_STORAGE"
+          echo "DELETE_OLD_UAMI=$DELETE_OLD_UAMI"
