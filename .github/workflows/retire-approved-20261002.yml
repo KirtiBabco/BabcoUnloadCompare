@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 env:
-  AZURE_CLIENT_ID: a799c98d-28d5-4301-ada3-b40541135c08
+  AZURE_CLIENT_ID: d2865f7f-3cb8-4045-9750-6e569c6349b5
   AZURE_TENANT_ID: 7e3bfe8e-acb5-4e0e-9798-c05331d2940c
   AZURE_SUBSCRIPTION_ID: 0e27b0b7-22b9-4e96-8faa-897ca9f09e9c
   RG: rg-babco-rnd-sandbox
@@ -53,7 +53,7 @@ jobs:
           done
 
           PLAN07="/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Web/serverfarms/plan-resolvedesk-kirti20260807"
-          PLAN07_APPS="$(az webapp list -g "$RG" --query "[?tolower(serverFarmId)==tolower('$PLAN07')].name" -o tsv)"
+          PLAN07_APPS="$(az webapp list -g "$RG" --query "[?serverFarmId=='$PLAN07'].name" -o tsv)"
           test "$PLAN07_APPS" = "app-resolvedesk-kirti20260807"
 
           UNEXPECTED="$(az sql db list -g "$RG" -s sql-resolvedesk-kirti20260807 --query "[?name!='master' && name!='ResolveDeskDb'].name" -o tsv)"
@@ -160,22 +160,29 @@ jobs:
           echo "Approved RETIRE resources are absent and KEEP resources are present."
 
       - name: Remove temporary cleanup identity and RBAC
-        if: always()
+        if: success()
         shell: bash
         run: |
           set +e
 
-          UAMI="/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-babco-unloadcompare-gha-260814"
-
-          # Delete the old Unload Aug 14 identity itself. Its repo-bound FIC is a child and is removed with it.
-          if az resource show --ids "$UAMI" >/dev/null 2>&1; then
-            az resource delete --ids "$UAMI"
-          fi
-
-          # Best-effort self-removal of the temporary role assignments using the already-issued access token.
+          # Remove stale role assignments from the first temporary identity.
           az role assignment delete --ids "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$WORKSPACE_RG/providers/Microsoft.Authorization/roleAssignments/d61535a7-f087-4ccf-8876-5d730b1682d4"
           az role assignment delete --ids "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$WORKSPACE_RG/providers/Microsoft.Authorization/roleAssignments/b02d44e7-ae4e-49bc-8bc0-e76f01799381"
           az role assignment delete --ids "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Authorization/roleAssignments/71f08e62-3e2d-4bf1-9ed1-c65d3daf0d02"
           az role assignment delete --ids "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Authorization/roleAssignments/aa0f94a4-6d7d-4f96-94cf-7d602806b6fb"
+
+          # Remove temporary workspace-scoped roles while the cleanup identity is still alive.
+          az role assignment delete --ids "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$WORKSPACE_RG/providers/Microsoft.Authorization/roleAssignments/9b9f2022-574f-4468-8e97-38e4a8b6c527"
+          az role assignment delete --ids "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$WORKSPACE_RG/providers/Microsoft.Authorization/roleAssignments/1c6d4bdd-c59b-4a6f-8658-a9af8877ab52"
+
+          # Delete the temporary cleanup identity. The federated credential is removed with it.
+          UAMI="/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-kirti-retire-approved-20261002"
+          if az resource show --ids "$UAMI" >/dev/null 2>&1; then
+            az resource delete --ids "$UAMI"
+          fi
+
+          # Best-effort removal of the final two main-RG role assignments using the already-issued access token.
+          az role assignment delete --ids "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Authorization/roleAssignments/4e2c4470-c2e4-4cef-916e-13a0791012f1"
+          az role assignment delete --ids "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.Authorization/roleAssignments/d1ac7a73-caf9-44a0-bb35-44bb9dba20bd"
 
           exit 0
